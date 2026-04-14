@@ -1,0 +1,4 @@
+{
+  "url": "wss://your-gateway-host:8001/",
+  "token": "your-gateway-token-here"
+}
