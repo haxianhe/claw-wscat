@@ -24,6 +24,7 @@ body {
   background: #313244; border: 1px solid #45475a; border-radius: 4px;
   color: #cdd6f4; padding: 4px 8px; outline: none;
   font-family: inherit; font-size: 12px;
+  transition: border-color 0.3s;
 }
 .topbar input:focus { border-color: #89b4fa; }
 .topbar input:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -170,7 +171,6 @@ body {
 
 /* 预览 Tab（JSON tree） */
 #resp-preview { font-size: 12px; line-height: 1.8; }
-#resp-preview { display: none; }
 .jt-node { padding-left: 18px; }
 .jt-toggle { cursor: pointer; color: #89b4fa; user-select: none; display: inline-block; width: 14px; }
 .jt-key   { color: #89b4fa; }
@@ -241,6 +241,110 @@ body {
 #patch-raw-textarea.invalid { border-color: #f38ba8; }
 #patch-json-error {
   color: #f38ba8; font-size: 11px; padding: 4px 12px; min-height: 16px; flex-shrink: 0;
+}
+
+/* ── Sessions Tab ── */
+#resp-sessions { display: none; flex-direction: column; height: 100%; }
+.sessions-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-bottom: 1px solid #313244;
+  background: #181825; flex-shrink: 0;
+}
+.sessions-toolbar input {
+  flex: 1; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #cdd6f4; padding: 4px 8px;
+  font-family: inherit; font-size: 11px; outline: none;
+}
+.sessions-toolbar input:focus { border-color: #89b4fa; }
+#btn-sessions-back {
+  background: #313244; border: 1px solid #45475a; border-radius: 4px;
+  color: #cdd6f4; padding: 3px 8px; cursor: pointer;
+  font-size: 11px; font-family: inherit; flex-shrink: 0; display: none;
+}
+#btn-sessions-back:hover { background: #45475a; }
+.sessions-list { flex: 1; overflow-y: auto; padding: 8px; }
+.sessions-empty { color: #6c7086; font-size: 12px; padding: 16px; text-align: center; }
+.session-item {
+  background: #313244; border: 1px solid #45475a; border-radius: 6px;
+  padding: 10px; margin-bottom: 6px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.session-item:hover { border-color: #89b4fa; }
+.session-item-name { color: #a6e3a1; font-weight: bold; font-size: 12px; }
+.session-item-key { color: #89b4fa; font-size: 10px; margin-top: 2px; }
+.session-item-meta { color: #6c7086; font-size: 10px; margin-top: 4px; display: flex; gap: 8px; }
+
+/* 消息链 */
+.msg-list { flex: 1; overflow-y: auto; padding: 8px; }
+.msg-bubble { margin-bottom: 10px; }
+.msg-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 3px; font-size: 10px; color: #6c7086;
+}
+.msg-role {
+  border-radius: 3px; padding: 1px 5px; font-size: 10px;
+  font-weight: bold; margin-right: 4px;
+}
+.msg-role-user     { background: #89b4fa; color: #1e1e2e; }
+.msg-role-assistant { background: #a6e3a1; color: #1e1e2e; }
+.msg-role-tool     { background: #fab387; color: #1e1e2e; }
+.msg-body {
+  background: #313244; border-radius: 6px; padding: 8px 10px;
+  font-size: 12px; line-height: 1.6; color: #cdd6f4;
+  white-space: pre-wrap; word-break: break-word;
+}
+.msg-tool-row {
+  background: #1e1e2e; border-radius: 4px; padding: 4px 8px;
+  margin-top: 5px; color: #89b4fa; font-size: 11px;
+  cursor: pointer; user-select: none;
+}
+.msg-tool-row.open { border-radius: 4px 4px 0 0; }
+.msg-tool-args {
+  background: #1e1e2e; border-radius: 0 0 4px 4px; padding: 6px 8px;
+  color: #a6e3a1; font-size: 11px; white-space: pre-wrap; display: none;
+}
+.msg-header-right { display: flex; gap: 6px; align-items: center; }
+.btn-copy-msg {
+  background: #45475a; border: none; border-radius: 3px;
+  color: #cdd6f4; padding: 1px 7px; font-size: 10px;
+  cursor: pointer; font-family: inherit;
+}
+.btn-copy-msg:hover { background: #585b70; }
+.msg-body mark { background: #f9e2af; color: #1e1e2e; border-radius: 2px; }
+
+/* Text Tab 复制按钮 */
+#btn-copy-text {
+  padding: 4px 8px; background: none; border: none;
+  color: #6c7086; cursor: pointer; font-size: 11px;
+  font-family: inherit; margin-left: 4px;
+}
+#btn-copy-text:hover { color: #cdd6f4; }
+
+/* 输入框解析成功高亮 */
+.parse-ok {
+  border-color: #a6e3a1;
+  transition: border-color 0.3s;
+}
+
+/* 全局搜索结果 */
+.global-search-header {
+  color: #6c7086; font-size: 11px; padding: 4px 8px 8px;
+}
+.global-search-result {
+  background: #313244; border: 1px solid #45475a; border-radius: 6px;
+  padding: 10px; margin-bottom: 6px; cursor: pointer;
+  transition: border-color 0.15s;
+}
+.global-search-result:hover { border-color: #89b4fa; }
+.global-search-result-header {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 5px; font-size: 10px; color: #6c7086;
+}
+.global-search-result-session { color: #cba6f7; font-weight: bold; }
+.global-search-result-text {
+  font-size: 12px; color: #cdd6f4; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 72px; overflow: hidden;
 }
 </style>
 </head>
@@ -352,12 +456,21 @@ body {
       <div class="tab-bar">
         <div class="tab active" data-tab="text">文本</div>
         <div class="tab" data-tab="preview">预览</div>
+        <div class="tab" data-tab="sessions">Sessions</div>
         <span id="resp-timing"></span>
+        <button id="btn-copy-text" title="复制响应文本">复制</button>
         <button id="btn-clear-resp">清空</button>
       </div>
       <div class="response-content">
         <pre id="resp-text"></pre>
         <div id="resp-preview"></div>
+        <div id="resp-sessions">
+          <div class="sessions-toolbar">
+            <button id="btn-sessions-back">← 返回</button>
+            <input id="sessions-search" type="text" placeholder="搜索消息…" autocomplete="off" />
+          </div>
+          <div class="sessions-list" id="sessions-body"></div>
+        </div>
       </div>
     </div>
     <div class="event-section">
@@ -565,6 +678,17 @@ const certLink    = document.getElementById('cert-link');
 urlInput.value   = localStorage.getItem('claw-wscat-url')   || '';
 tokenInput.value = localStorage.getItem('claw-wscat-token') || '';
 
+function convertToWsUrl(rawUrl) {
+  return rawUrl.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://');
+}
+
+function flashParseOk(...inputs) {
+  inputs.forEach(el => {
+    el.classList.add('parse-ok');
+    setTimeout(() => el.classList.remove('parse-ok'), 1500);
+  });
+}
+
 function setStatus(state, message, showCert = false) {
   // state: 'disconnected' | 'connecting' | 'connected' | 'error'
   statusDot.className = state === 'connected' ? 'connected' : state === 'error' ? 'error' : '';
@@ -589,6 +713,50 @@ function updateCertLink(url) {
     certLink.textContent = url;
   }
 }
+
+urlInput.addEventListener('paste', (e) => {
+  const text = e.clipboardData.getData('text').trim();
+  if (!text) return;
+
+  // 格式 A：JSON 含 machineUrl + token
+  try {
+    const obj = JSON.parse(text);
+    if (obj && typeof obj === 'object' && obj.machineUrl) {
+      e.preventDefault();
+      urlInput.value   = convertToWsUrl(obj.machineUrl);
+      tokenInput.value = obj.token ?? tokenInput.value;
+      flashParseOk(urlInput, tokenInput);
+      return;
+    }
+  } catch { /* 不是 JSON，继续 */ }
+
+  // 格式 B：host:port+token（最后一个 + 分割）
+  const plusIdx = text.lastIndexOf('+');
+  if (plusIdx > 0 && text.slice(0, plusIdx).match(/^https?:\/\//i)) {
+    e.preventDefault();
+    urlInput.value   = convertToWsUrl(text.slice(0, plusIdx));
+    tokenInput.value = text.slice(plusIdx + 1);
+    flashParseOk(urlInput, tokenInput);
+    return;
+  }
+
+  // 格式 C：URL 含 authcode 查询参数
+  try {
+    const u = new URL(text);
+    const authcode = u.searchParams.get('authcode');
+    if (authcode) {
+      e.preventDefault();
+      u.search = '';
+      u.hash   = '';
+      urlInput.value   = convertToWsUrl(u.toString());
+      tokenInput.value = authcode;
+      flashParseOk(urlInput, tokenInput);
+      return;
+    }
+  } catch { /* 不是合法 URL */ }
+
+  // 无匹配：放行默认粘贴
+});
 
 btnConnect.addEventListener('click', async () => {
   if (gw) {
@@ -989,6 +1157,8 @@ function escapeHtml(str) {
 }
 
 let lastPayload = null;
+let sessionList = null;      // sessions.list 响应缓存
+let currentMessages = null;  // chat.history 响应缓存
 
 function showScopeHelp(missingScope) {
   respText.insertAdjacentHTML('beforeend',
@@ -1017,6 +1187,263 @@ function showTextResponse(payload, ms, isError) {
   }
   respTiming.textContent = ms != null ? `${ms}ms` : '';
   lastPayload = payload;
+}
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function renderSessionList(sessions) {
+  sessionList = sessions;
+  currentMessages = null;
+  sessionsBodyEl.innerHTML = '';
+  btnSessionsBack.style.display = 'none';
+  sessionsSearchEl.style.display = sessions && sessions.length ? 'block' : 'none';
+  sessionsSearchEl.placeholder = '输入关键词按 Enter 全局搜索…';
+  sessionsSearchEl.value = '';
+
+  if (!sessions || sessions.length === 0) {
+    sessionsBodyEl.innerHTML = '<div class="sessions-empty">暂无 Session</div>';
+    switchTab('sessions');
+    return;
+  }
+
+  sessions.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'session-item';
+    item.innerHTML =
+      `<div class="session-item-name">${escapeHtml(s.displayName ?? s.key)}</div>` +
+      `<div class="session-item-key">${escapeHtml(s.key)}</div>` +
+      `<div class="session-item-meta">` +
+        `<span>${escapeHtml(s.model ?? '')}</span>` +
+        (s.totalTokens ? `<span>· ${s.totalTokens.toLocaleString()} tokens</span>` : '') +
+        `<span>· ${formatTime(s.updatedAt)}</span>` +
+      `</div>`;
+
+    item.addEventListener('click', async () => {
+      if (!gw) return;
+      paramsTextarea.value = JSON.stringify({ sessionKey: s.key }, null, 2);
+      validateJson();
+      const t0 = Date.now();
+      try {
+        const payload = await gw.request('chat.history', { sessionKey: s.key });
+        showTextResponse(payload, Date.now() - t0, false);
+        renderMessageChain(payload.messages ?? []);
+      } catch (err) {
+        showTextResponse({ error: err.message }, Date.now() - t0, true);
+      }
+    });
+
+    sessionsBodyEl.appendChild(item);
+  });
+
+  switchTab('sessions');
+}
+
+function renderMessageChain(messages) {
+  currentMessages = messages;
+  sessionsBodyEl.innerHTML = '';
+  btnSessionsBack.style.display = sessionList ? 'block' : 'none';
+  sessionsSearchEl.style.display = 'block';
+  sessionsSearchEl.placeholder = '搜索消息…';
+  sessionsSearchEl.value = '';
+
+  if (!messages || messages.length === 0) {
+    sessionsBodyEl.innerHTML = '<div class="sessions-empty">暂无消息</div>';
+    switchTab('sessions');
+    return;
+  }
+
+  const sorted = [...messages].sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
+  const listEl = document.createElement('div');
+  listEl.className = 'msg-list';
+
+  sorted.forEach(msg => {
+    listEl.appendChild(buildMsgBubble(msg));
+  });
+
+  sessionsBodyEl.appendChild(listEl);
+  switchTab('sessions');
+}
+
+function buildMsgBubble(msg) {
+  const role = msg.role ?? 'unknown';
+  const roleClass = role === 'user' ? 'msg-role-user'
+    : role === 'assistant' ? 'msg-role-assistant'
+    : 'msg-role-tool';
+  const roleLabel = role === 'user' ? 'USER'
+    : role === 'assistant' ? 'ASST'
+    : 'TOOL';
+
+  const senderInfo = msg.senderLabel ?? msg.model ?? '';
+  const timeStr = formatTime(msg.timestamp);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+
+  // 提取纯文本用于复制
+  const plainTexts = (msg.content ?? [])
+    .filter(c => c.type === 'text')
+    .map(c => c.text ?? '')
+    .join('\n');
+
+  bubble.innerHTML =
+    `<div class="msg-header">` +
+      `<span><span class="msg-role ${roleClass}">${roleLabel}</span>${escapeHtml(senderInfo)}</span>` +
+      `<span class="msg-header-right">` +
+        `<span>${escapeHtml(timeStr)}</span>` +
+        `<button class="btn-copy-msg">复制</button>` +
+      `</span>` +
+    `</div>` +
+    `<div class="msg-body"></div>`;
+
+  const bodyEl = bubble.querySelector('.msg-body');
+
+  (msg.content ?? []).forEach(c => {
+    if (c.type === 'text') {
+      const t = document.createElement('span');
+      t.textContent = c.text ?? '';
+      bodyEl.appendChild(t);
+    } else if (c.type === 'toolCall') {
+      const row = document.createElement('div');
+      row.className = 'msg-tool-row';
+      row.textContent = `▶ toolCall: ${c.name ?? ''}`;
+      const args = document.createElement('div');
+      args.className = 'msg-tool-args';
+      args.textContent = JSON.stringify(c.arguments ?? {}, null, 2);
+      row.addEventListener('click', () => {
+        const shown = args.style.display === 'block';
+        args.style.display = shown ? 'none' : 'block';
+        row.textContent = (shown ? '▶' : '▼') + ` toolCall: ${c.name ?? ''}`;
+        row.classList.toggle('open', !shown);
+      });
+      bodyEl.appendChild(row);
+      bodyEl.appendChild(args);
+    } else if (c.type === 'thinking') {
+      const row = document.createElement('div');
+      row.className = 'msg-tool-row';
+      row.textContent = '▶ thinking';
+      const content = document.createElement('div');
+      content.className = 'msg-tool-args';
+      content.textContent = c.thinking ?? c.text ?? '';
+      row.addEventListener('click', () => {
+        const shown = content.style.display === 'block';
+        content.style.display = shown ? 'none' : 'block';
+        row.textContent = (shown ? '▶' : '▼') + ' thinking';
+        row.classList.toggle('open', !shown);
+      });
+      bodyEl.appendChild(row);
+      bodyEl.appendChild(content);
+    } else {
+      const t = document.createElement('span');
+      t.style.color = '#6c7086';
+      t.textContent = `[${c.type}]`;
+      bodyEl.appendChild(t);
+    }
+  });
+
+  // 复制按钮绑定
+  bubble.querySelector('.btn-copy-msg').addEventListener('click', function() {
+    navigator.clipboard.writeText(plainTexts).then(() => {
+      const orig = this.textContent;
+      this.textContent = '✓ 已复制';
+      setTimeout(() => { this.textContent = orig; }, 1500);
+    });
+  });
+
+  return bubble;
+}
+
+async function searchAllSessions(query) {
+  if (!gw || !sessionList || !sessionList.length) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { renderSessionList(sessionList); return; }
+
+  sessionsBodyEl.innerHTML = '<div class="sessions-empty">搜索中…</div>';
+  btnSessionsBack.style.display = 'block';
+  sessionsSearchEl.style.display = 'block';
+
+  const results = await Promise.allSettled(
+    sessionList.map(s =>
+      gw.request('chat.history', { sessionKey: s.key })
+        .then(p => ({ session: s, messages: p.messages ?? [] }))
+    )
+  );
+
+  const matches = [];
+  results.forEach(r => {
+    if (r.status !== 'fulfilled') return;
+    const { session, messages } = r.value;
+    messages.forEach(msg => {
+      const texts = (msg.content ?? [])
+        .filter(c => c.type === 'text')
+        .map(c => c.text ?? '')
+        .join('\n');
+      if (texts.toLowerCase().includes(q)) matches.push({ session, msg, texts });
+    });
+  });
+
+  sessionsBodyEl.innerHTML = '';
+
+  if (!matches.length) {
+    sessionsBodyEl.innerHTML = `<div class="sessions-empty">无匹配消息：${escapeHtml(query)}</div>`;
+    return;
+  }
+
+  const header = document.createElement('div');
+  header.className = 'global-search-header';
+  header.textContent = `找到 ${matches.length} 条结果`;
+  sessionsBodyEl.appendChild(header);
+
+  matches.sort((a, b) => (b.msg.timestamp ?? 0) - (a.msg.timestamp ?? 0));
+
+  matches.forEach(({ session, msg, texts }) => {
+    const role = msg.role ?? 'unknown';
+    const roleClass = role === 'user' ? 'msg-role-user'
+      : role === 'assistant' ? 'msg-role-assistant' : 'msg-role-tool';
+    const roleLabel = role === 'user' ? 'USER' : role === 'assistant' ? 'ASST' : 'TOOL';
+
+    // 高亮匹配文本
+    const lower = texts.toLowerCase();
+    let highlighted = '';
+    let i = 0;
+    while (i < texts.length) {
+      const idx = lower.indexOf(q, i);
+      if (idx === -1) { highlighted += escapeHtml(texts.slice(i)); break; }
+      highlighted += escapeHtml(texts.slice(i, idx));
+      highlighted += `<mark>${escapeHtml(texts.slice(idx, idx + q.length))}</mark>`;
+      i = idx + q.length;
+    }
+
+    const item = document.createElement('div');
+    item.className = 'global-search-result';
+    item.innerHTML =
+      `<div class="global-search-result-header">` +
+        `<span class="global-search-result-session">${escapeHtml(session.displayName ?? session.key)}</span>` +
+        `<span class="msg-role ${roleClass}">${roleLabel}</span>` +
+        `<span>${escapeHtml(formatTime(msg.timestamp))}</span>` +
+      `</div>` +
+      `<div class="global-search-result-text">${highlighted}</div>`;
+
+    item.addEventListener('click', async () => {
+      if (!gw) return;
+      paramsTextarea.value = JSON.stringify({ sessionKey: session.key }, null, 2);
+      validateJson();
+      const t0 = Date.now();
+      try {
+        const payload = await gw.request('chat.history', { sessionKey: session.key });
+        showTextResponse(payload, Date.now() - t0, false);
+        renderMessageChain(payload.messages ?? []);
+      } catch (err) {
+        showTextResponse({ error: err.message }, Date.now() - t0, true);
+      }
+    });
+
+    sessionsBodyEl.appendChild(item);
+  });
 }
 
 // ── 发送按钮 ──────────────────────────────────────────────────────────────────
@@ -1049,6 +1476,12 @@ btnSend.addEventListener('click', async () => {
     const payload = await gw.request(currentMethod, params);
     showTextResponse(payload, Date.now() - t0, false);
     if (currentTab === 'preview') renderPreview(payload);
+    // Sessions Tab 自动渲染
+    if (currentMethod === 'sessions.list' && Array.isArray(payload?.sessions)) {
+      renderSessionList(payload.sessions);
+    } else if (currentMethod === 'chat.history' && Array.isArray(payload?.messages)) {
+      renderMessageChain(payload.messages);
+    }
     // 追踪 config.get 的响应 hash
     if (currentMethod === 'config.get' && payload?.hash) {
       lastConfigGetHash = payload.hash;
@@ -1072,34 +1505,115 @@ btnSend.addEventListener('click', async () => {
   }
 });
 
+// ── Tab 切换 ──────────────────────────────────────────────────────────────────
+
+let currentTab = 'text';
+
+const respPreviewEl    = document.getElementById('resp-preview');
+const respSessionsEl   = document.getElementById('resp-sessions');
+const sessionsSearchEl = document.getElementById('sessions-search');
+const sessionsBodyEl   = document.getElementById('sessions-body');
+const btnSessionsBack  = document.getElementById('btn-sessions-back');
+const btnCopyText      = document.getElementById('btn-copy-text');
+
 document.getElementById('btn-clear-resp').addEventListener('click', () => {
   respText.innerHTML = '';
   document.getElementById('resp-preview').innerHTML = '';
   respTiming.textContent = '';
   lastPayload = null;
+  sessionList = null;
+  currentMessages = null;
+  sessionsBodyEl.innerHTML = '';
 });
 
-// ── Tab 切换 ──────────────────────────────────────────────────────────────────
+btnCopyText.addEventListener('click', () => {
+  const text = respText.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btnCopyText.textContent;
+    btnCopyText.textContent = '✓ 已复制';
+    setTimeout(() => { btnCopyText.textContent = orig; }, 1500);
+  }).catch(() => {});
+});
 
-let currentTab = 'text';
+function switchTab(tabName) {
+  currentTab = tabName;
+  document.querySelectorAll('.tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.tab === tabName)
+  );
+  respText.style.display        = tabName === 'text'     ? '' : 'none';
+  respPreviewEl.style.display   = tabName === 'preview'  ? 'block' : 'none';
+  respSessionsEl.style.display  = tabName === 'sessions' ? 'flex' : 'none';
+  btnCopyText.style.display     = tabName === 'text'     ? '' : 'none';
 
-const respPreviewEl = document.getElementById('resp-preview');
+  if (tabName === 'preview' && lastPayload !== null) renderPreview(lastPayload);
+}
 
 document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    currentTab = tab.dataset.tab;
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
 
-    if (currentTab === 'text') {
-      respText.style.display = '';
-      respPreviewEl.style.display = 'none';
-    } else {
-      respText.style.display = 'none';
-      respPreviewEl.style.display = 'block';
-      if (lastPayload !== null) renderPreview(lastPayload);
-    }
+// 初始化：确保 preview 和 sessions 隐藏
+respPreviewEl.style.display  = 'none';
+respSessionsEl.style.display = 'none';
+
+btnSessionsBack.addEventListener('click', () => {
+  if (sessionList) renderSessionList(sessionList);
+});
+
+sessionsSearchEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && currentMessages === null) {
+    searchAllSessions(sessionsSearchEl.value);
+  }
+});
+
+sessionsSearchEl.addEventListener('input', () => {
+  const q = sessionsSearchEl.value.trim().toLowerCase();
+  const msgList = sessionsBodyEl.querySelector('.msg-list');
+  if (!msgList) return;
+
+  msgList.querySelectorAll('.msg-bubble').forEach(bubble => {
+    const bodyEl = bubble.querySelector('.msg-body');
+    const fullText = bodyEl.textContent.toLowerCase();
+    const match = !q || fullText.includes(q);
+    bubble.style.display = match ? '' : 'none';
+
+    // 高亮：只处理直接子 span（无 class 的纯文本 span）
+    bodyEl.querySelectorAll('span').forEach(span => {
+      if (span.classList.length > 0) return;
+      const orig = span.dataset.origText ?? span.textContent;
+      span.dataset.origText = orig;
+      if (!q) {
+        span.innerHTML = escapeHtml(orig);
+        return;
+      }
+      const lower = orig.toLowerCase();
+      let result = '';
+      let i = 0;
+      while (i < orig.length) {
+        const idx = lower.indexOf(q, i);
+        if (idx === -1) { result += escapeHtml(orig.slice(i)); break; }
+        result += escapeHtml(orig.slice(i, idx));
+        result += `<mark>${escapeHtml(orig.slice(idx, idx + q.length))}</mark>`;
+        i = idx + q.length;
+      }
+      span.innerHTML = result;
+    });
   });
+
+  // 无匹配提示
+  const visible = [...msgList.querySelectorAll('.msg-bubble')].filter(b => b.style.display !== 'none');
+  let emptyEl = msgList.querySelector('.sessions-empty');
+  if (visible.length === 0 && q) {
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'sessions-empty';
+      msgList.appendChild(emptyEl);
+    }
+    emptyEl.textContent = `无匹配消息：${q}`;
+  } else if (emptyEl) {
+    emptyEl.remove();
+  }
 });
 
 // ── JSON 树渲染 ───────────────────────────────────────────────────────────────
