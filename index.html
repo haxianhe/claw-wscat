@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>claw-wscat</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1e1e2e; color: #cdd6f4;
+  font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+  font-size: 13px; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* ── 顶部连接栏 ── */
+.topbar {
+  background: #181825; padding: 8px 16px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #313244; flex-shrink: 0;
+}
+.topbar-title { color: #89b4fa; font-weight: bold; margin-right: 4px; }
+.topbar input {
+  background: #313244; border: 1px solid #45475a; border-radius: 4px;
+  color: #cdd6f4; padding: 4px 8px; outline: none;
+  font-family: inherit; font-size: 12px;
+}
+.topbar input:focus { border-color: #89b4fa; }
+.topbar input:disabled { opacity: 0.5; cursor: not-allowed; }
+#url-input { width: 300px; }
+#token-input { width: 200px; }
+#btn-connect {
+  background: #a6e3a1; color: #1e1e2e; border: none;
+  border-radius: 4px; padding: 5px 14px; cursor: pointer;
+  font-weight: bold; font-size: 12px; font-family: inherit;
+}
+#btn-connect.connected { background: #f38ba8; }
+#status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #45475a; flex-shrink: 0;
+}
+#status-dot.connected { background: #a6e3a1; }
+#status-dot.error { background: #f38ba8; }
+#status-text { color: #6c7086; font-size: 11px; }
+
+/* ── 证书引导提示 ── */
+#cert-hint {
+  background: #2a1f3d; border: 1px solid #cba6f7; border-radius: 6px;
+  padding: 10px 14px; margin: 8px 16px 0; font-size: 12px;
+  color: #cba6f7; line-height: 1.6; display: none;
+}
+#cert-hint a { color: #89b4fa; }
+#cert-hint strong { color: #f5c2e7; }
+
+/* ── 主体三栏 ── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── 左栏：命令列表 ── */
+.sidebar {
+  width: 190px; background: #181825;
+  border-right: 1px solid #313244;
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.sidebar-title {
+  padding: 10px 12px 6px; color: #6c7086;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid #313244; flex-shrink: 0;
+}
+.cmd-search-wrap { padding: 6px 8px; flex-shrink: 0; border-bottom: 1px solid #313244; }
+.cmd-search-wrap input {
+  width: 100%; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #cdd6f4; padding: 4px 8px;
+  font-family: inherit; font-size: 11px; outline: none;
+}
+.cmd-search-wrap input:focus { border-color: #89b4fa; }
+.cmd-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.cmd-item {
+  padding: 5px 10px 5px 12px; cursor: pointer; color: #bac2de;
+  font-size: 11px; border-left: 3px solid transparent;
+  transition: background 0.1s; user-select: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cmd-item:hover { background: #313244; }
+.cmd-item.active { background: #313244; border-left-color: #89b4fa; color: #89b4fa; }
+.cmd-item.locked { color: #585b70; }
+.cmd-item.locked::after { content: ' 🔒'; font-size: 9px; }
+.cmd-item .cmd-desc { color: #6c7086; font-size: 10px; margin-top: 2px; }
+.cmd-custom {
+  padding: 7px 12px; color: #cba6f7; cursor: pointer;
+  font-size: 12px; border-left: 3px solid transparent;
+  border-top: 1px solid #313244; flex-shrink: 0;
+  user-select: none;
+}
+.cmd-custom:hover { background: #313244; }
+.cmd-custom.active { background: #313244; border-left-color: #cba6f7; }
+
+/* ── 中栏：参数 + 发送 ── */
+.center-panel {
+  width: 260px; border-right: 1px solid #313244;
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.panel-header {
+  padding: 8px 12px; color: #6c7086; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid #313244;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+#method-badge {
+  background: #313244; color: #cba6f7;
+  border-radius: 3px; padding: 1px 6px; font-size: 11px;
+  max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#custom-method-input {
+  margin: 8px 12px 0; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #cba6f7; padding: 5px 8px;
+  font-family: inherit; font-size: 12px; outline: none; display: none;
+}
+#custom-method-input:focus { border-color: #cba6f7; }
+#params-textarea {
+  flex: 1; margin: 8px 12px; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #a6e3a1; padding: 8px;
+  font-family: inherit; font-size: 12px; resize: none; outline: none;
+  line-height: 1.6;
+}
+#params-textarea:focus { border-color: #89b4fa; }
+#params-textarea.invalid { border-color: #f38ba8; }
+#json-error { color: #f38ba8; font-size: 11px; padding: 0 12px 4px; min-height: 16px; }
+#btn-send {
+  margin: 0 12px 12px; background: #89b4fa; color: #1e1e2e;
+  border: none; border-radius: 4px; padding: 7px; cursor: pointer;
+  font-weight: bold; font-size: 13px; font-family: inherit; flex-shrink: 0;
+}
+#btn-send:disabled { background: #45475a; color: #6c7086; cursor: not-allowed; }
+
+/* ── 右栏：响应 + 事件 ── */
+.right-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* 响应区 */
+.response-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.tab-bar {
+  display: flex; align-items: center;
+  border-bottom: 1px solid #313244; background: #181825;
+  padding: 0 12px; flex-shrink: 0;
+}
+.tab {
+  padding: 7px 12px; cursor: pointer; color: #6c7086;
+  font-size: 11px; border-bottom: 2px solid transparent;
+  margin-bottom: -1px; user-select: none;
+}
+.tab.active { color: #89b4fa; border-bottom-color: #89b4fa; }
+#resp-timing { margin-left: auto; color: #6c7086; font-size: 11px; }
+#btn-clear-resp {
+  padding: 4px 8px; background: none; border: none;
+  color: #6c7086; cursor: pointer; font-size: 11px; font-family: inherit;
+  margin-left: 8px;
+}
+#btn-clear-resp:hover { color: #cdd6f4; }
+.response-content { flex: 1; overflow: auto; padding: 10px 12px; }
+
+/* 文本 Tab */
+#resp-text { white-space: pre-wrap; font-size: 12px; line-height: 1.6; word-break: break-all; }
+#resp-text .j-key    { color: #89b4fa; }
+#resp-text .j-str    { color: #a6e3a1; }
+#resp-text .j-num    { color: #fab387; }
+#resp-text .j-bool   { color: #cba6f7; }
+#resp-text .j-null   { color: #f38ba8; }
+#resp-text .j-err    { color: #f38ba8; }
+#resp-text .j-ok     { color: #a6e3a1; }
+
+/* 预览 Tab（JSON tree） */
+#resp-preview { font-size: 12px; line-height: 1.8; }
+#resp-preview { display: none; }
+.jt-node { padding-left: 18px; }
+.jt-toggle { cursor: pointer; color: #89b4fa; user-select: none; display: inline-block; width: 14px; }
+.jt-key   { color: #89b4fa; }
+.jt-str   { color: #a6e3a1; }
+.jt-num   { color: #fab387; }
+.jt-bool  { color: #cba6f7; }
+.jt-null  { color: #f38ba8; }
+.jt-bracket { color: #6c7086; }
+.jt-children.collapsed { display: none; }
+
+/* 事件日志区 */
+.event-section {
+  height: 150px; display: flex; flex-direction: column;
+  flex-shrink: 0; border-top: 1px solid #313244;
+}
+.event-header {
+  padding: 6px 12px; color: #6c7086; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid #313244;
+  display: flex; justify-content: space-between; align-items: center;
+  background: #181825; flex-shrink: 0;
+}
+#btn-clear-ev {
+  padding: 2px 6px; background: none; border: none;
+  color: #6c7086; cursor: pointer; font-size: 11px; font-family: inherit;
+}
+#btn-clear-ev:hover { color: #cdd6f4; }
+#event-log { flex: 1; overflow-y: auto; padding: 6px 12px; }
+.ev-line { font-size: 11px; line-height: 1.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-time  { color: #6c7086; }
+.ev-name  { color: #cba6f7; }
+.ev-payload { color: #bac2de; }
+.ev-sys   { color: #89dceb; }
+.ev-raw   { color: #f9e2af; }
+
+/* ── config.patch 专属表单 ── */
+#patch-form {
+  flex-direction: column; flex: 1; overflow: hidden;
+}
+.patch-field-label {
+  padding: 0 12px; color: #6c7086; font-size: 11px; flex-shrink: 0;
+}
+.patch-field-label--raw { margin-top: 8px; }
+.patch-basehash-row {
+  display: flex; align-items: center; gap: 6px;
+  margin: 4px 12px 0; flex-shrink: 0;
+}
+.patch-basehash-row input {
+  flex: 1; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #cdd6f4; padding: 4px 8px;
+  font-family: inherit; font-size: 12px; outline: none;
+}
+.patch-basehash-row input:focus { border-color: #89b4fa; }
+#patch-fill-btn {
+  background: #313244; border: 1px solid #45475a; border-radius: 4px;
+  color: #cdd6f4; padding: 4px 8px; cursor: pointer;
+  font-family: inherit; font-size: 12px; flex-shrink: 0;
+}
+#patch-fill-btn:not(:disabled):hover { background: #45475a; }
+#patch-fill-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#patch-raw-textarea {
+  flex: 1; margin: 4px 12px 0; background: #313244; border: 1px solid #45475a;
+  border-radius: 4px; color: #a6e3a1; padding: 8px;
+  font-family: inherit; font-size: 12px; resize: none; outline: none;
+  line-height: 1.6; min-height: 80px;
+}
+#patch-raw-textarea:focus { border-color: #89b4fa; }
+#patch-raw-textarea.invalid { border-color: #f38ba8; }
+#patch-json-error {
+  color: #f38ba8; font-size: 11px; padding: 4px 12px; min-height: 16px; flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- 顶部连接栏 -->
+<div class="topbar">
+  <span class="topbar-title">claw-wscat</span>
+  <input id="url-input" type="text" placeholder="ws://127.0.0.1:18789/ 或 wss://host:port/" />
+  <div style="display:flex;align-items:center;gap:0;">
+    <input id="token-input" type="password" placeholder="Token（可选）" style="border-radius:4px 0 0 4px;border-right:none;" />
+    <button id="btn-token-toggle" title="显示/隐藏 Token" style="background:#313244;border:1px solid #45475a;border-radius:0 4px 4px 0;color:#6c7086;padding:4px 7px;cursor:pointer;font-size:12px;line-height:1;flex-shrink:0;">👁</button>
+  </div>
+  <button id="btn-connect">连接</button>
+  <div id="status-dot"></div>
+  <span id="status-text">未连接</span>
+</div>
+
+<!-- 证书引导提示 -->
+<div id="cert-hint">
+  <strong>⚠ 连接失败？</strong>
+  如果 gateway 使用自签名证书，请先在新标签页中访问
+  <a id="cert-link" href="#" target="_blank">https://gateway:8001/</a>，
+  点击「继续访问」信任证书后，回到此页重新连接。
+  <br><span style="color:#a6e3a1;font-size:11px">
+    若打开后直接跳转到其他页面（未出现证书警告），说明证书已被信任，可直接关闭该标签页并重新连接。
+  </span>
+</div>
+
+<!-- 主体 -->
+<div class="main">
+
+  <!-- 左栏：命令列表 -->
+  <div class="sidebar">
+    <div class="sidebar-title">命令</div>
+    <div class="cmd-search-wrap">
+      <input id="cmd-search" type="text" placeholder="过滤…" autocomplete="off" />
+    </div>
+    <div class="cmd-list" id="cmd-list">
+      <div class="cmd-item active" data-cmd="channels.status">
+        channels.status
+        <div class="cmd-desc">频道账号运行状态</div>
+      </div>
+      <div class="cmd-item" data-cmd="status">
+        status
+        <div class="cmd-desc">gateway 整体状态</div>
+      </div>
+      <div class="cmd-item" data-cmd="models.list">
+        models.list
+        <div class="cmd-desc">可用 AI 模型</div>
+      </div>
+      <div class="cmd-item" data-cmd="agents.list">
+        agents.list
+        <div class="cmd-desc">Agent 列表</div>
+      </div>
+      <div class="cmd-item" data-cmd="sessions.list">
+        sessions.list
+        <div class="cmd-desc">所有对话 Session</div>
+      </div>
+      <div class="cmd-item" data-cmd="usage.status">
+        usage.status
+        <div class="cmd-desc">用量统计</div>
+      </div>
+      <div class="cmd-item" data-cmd="config.get">
+        config.get
+        <div class="cmd-desc">读取完整配置</div>
+      </div>
+      <div class="cmd-item" data-cmd="config.schema">
+        config.schema
+        <div class="cmd-desc">配置 JSON Schema</div>
+      </div>
+      <div class="cmd-item" data-cmd="config.patch">
+        config.patch
+        <div class="cmd-desc">修改配置</div>
+      </div>
+      <div class="cmd-item" data-cmd="skills.status">
+        skills.status
+        <div class="cmd-desc">Skills 状态</div>
+      </div>
+    </div>
+    <div class="cmd-custom" id="cmd-custom">⌘ 自定义 RPC…</div>
+  </div>
+
+  <!-- 中栏：参数 + 发送 -->
+  <div class="center-panel">
+    <div class="panel-header">
+      参数 <span id="method-badge">channels.status</span>
+    </div>
+    <input id="custom-method-input" type="text" placeholder="输入 method 名称…" />
+    <textarea id="params-textarea" placeholder="{}"></textarea>
+    <div id="json-error"></div>
+    <!-- config.patch 专属表单（默认隐藏） -->
+    <div id="patch-form" style="display:none;">
+      <div class="patch-field-label">baseHash</div>
+      <div class="patch-basehash-row">
+        <input id="patch-basehash-input" type="text" placeholder="留空则不传" />
+        <button id="patch-fill-btn" title="请先执行 config.get" disabled>↑</button>
+      </div>
+      <div class="patch-field-label patch-field-label--raw">raw 内容</div>
+      <textarea id="patch-raw-textarea" placeholder="{}"></textarea>
+      <div id="patch-json-error"></div>
+    </div>
+    <button id="btn-send" disabled>▶ 发 送</button>
+  </div>
+
+  <!-- 右栏：响应 + 事件 -->
+  <div class="right-panel">
+    <div class="response-section">
+      <div class="tab-bar">
+        <div class="tab active" data-tab="text">文本</div>
+        <div class="tab" data-tab="preview">预览</div>
+        <span id="resp-timing"></span>
+        <button id="btn-clear-resp">清空</button>
+      </div>
+      <div class="response-content">
+        <pre id="resp-text"></pre>
+        <div id="resp-preview"></div>
+      </div>
+    </div>
+    <div class="event-section">
+      <div class="event-header">
+        事件日志
+        <label style="display:flex;align-items:center;gap:4px;color:#6c7086;font-size:10px;margin-left:8px;cursor:pointer;text-transform:none;">
+          <input type="checkbox" id="chk-raw-frames" style="accent-color:#89b4fa;" /> 原始帧
+        </label>
+        <span style="color:#45475a;font-size:10px;margin-left:4px;flex:1">（health/heartbeat 已过滤）</span>
+        <button id="btn-clear-ev">清空</button>
+      </div>
+      <div id="event-log"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── GatewayClient ────────────────────────────────────────────────────────────
+
+class GatewayClient {
+  constructor(url, token) {
+    this.url = url;
+    this.token = token;
+    this.ws = null;
+    this.pending = new Map(); // id -> { resolve, reject, timer }
+    this.onEvent = null;      // (frame) => void
+    this.onDisconnect = null; // () => void
+    this.onLog = null;        // (msg: string) => void — 握手过程日志
+    this.onRawFrame = null;   // (raw: string) => void — 原始帧
+  }
+
+  _log(msg) { this.onLog?.(msg); }
+
+  async connect() {
+    this.ws = new WebSocket(this.url);
+    this._log(`WebSocket 连接中… ${this.url}`);
+
+    // 等待 WebSocket open
+    await new Promise((resolve, reject) => {
+      this.ws.addEventListener('open', resolve, { once: true });
+      this.ws.addEventListener('error', () => reject(new Error('WebSocket 连接失败')), { once: true });
+    });
+    this._log('WebSocket open');
+
+    // 等待 connect.challenge 事件（8s 超时）
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.ws.removeEventListener('message', handler);
+        this.ws.removeEventListener('close', onClose);
+        reject(new Error('握手超时：未收到 connect.challenge'));
+      }, 8000);
+      const onClose = () => {
+        clearTimeout(timer);
+        this.ws.removeEventListener('message', handler);
+        reject(new Error('握手期间连接断开'));
+      };
+      const handler = (ev) => {
+        let frame;
+        try { frame = JSON.parse(ev.data); } catch { return; }
+        if (frame.type === 'event' && frame.event === 'connect.challenge') {
+          clearTimeout(timer);
+          this.ws.removeEventListener('message', handler);
+          this.ws.removeEventListener('close', onClose);
+          this._log('收到 connect.challenge');
+          resolve();
+        }
+      };
+      this.ws.addEventListener('message', handler);
+      this.ws.addEventListener('close', onClose, { once: true });
+    });
+
+    // 发送 connect 握手请求（参数与 ClawX gateway-client 保持一致）
+    const authLog = this.token
+      ? `auth.token: ${this.token.slice(0, 8)}…${this.token.slice(-4)}，共 ${this.token.length} 字符`
+      : '无 auth（token 为空）';
+    this._log(`发送 connect（${authLog}）`);
+    this._send('connect', {
+      minProtocol: 3,
+      maxProtocol: 3,
+      client: { id: 'gateway-client', displayName: 'claw-wscat', version: '1.0.0', platform: 'browser', mode: 'ui' },
+      role: 'operator',
+      scopes: ['operator.admin', 'operator.read', 'operator.write', 'operator.approvals', 'operator.pairing'],
+      ...(this.token ? { auth: { token: this.token } } : {}),
+      caps: [],
+    });
+
+    // 等待握手响应 res（8s 超时）
+    const helloPayload = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.ws.removeEventListener('message', handler);
+        this.ws.removeEventListener('close', onClose);
+        reject(new Error('握手超时：未收到 connect 响应'));
+      }, 8000);
+      const onClose = () => {
+        clearTimeout(timer);
+        this.ws.removeEventListener('message', handler);
+        reject(new Error('握手期间连接断开'));
+      };
+      const handler = (ev) => {
+        let frame;
+        try { frame = JSON.parse(ev.data); } catch { return; }
+        if (frame.type === 'res') {
+          clearTimeout(timer);
+          this.ws.removeEventListener('message', handler);
+          this.ws.removeEventListener('close', onClose);
+          if (frame.ok === false) {
+            this._log(`connect 响应: 失败 — ${frame.error?.message ?? '未知错误'}`);
+            reject(new Error(frame.error?.message ?? 'connect 失败'));
+          } else {
+            this._log('connect 响应: 成功');
+            resolve(frame.payload);
+          }
+        }
+      };
+      this.ws.addEventListener('message', handler);
+      this.ws.addEventListener('close', onClose, { once: true });
+    });
+
+    // 启动持久消息循环
+    this._startReader();
+    return helloPayload;
+  }
+
+  _startReader() {
+    this.ws.addEventListener('message', (ev) => {
+      let frame;
+      try { frame = JSON.parse(ev.data); } catch { return; }
+
+      this.onRawFrame?.(ev.data);
+
+      if (frame.type === 'res') {
+        const fut = this.pending.get(frame.id);
+        if (fut) {
+          this.pending.delete(frame.id);
+          clearTimeout(fut.timer);
+          if (frame.ok === false) fut.reject(new Error(frame.error?.message ?? 'rpc error'));
+          else fut.resolve(frame.payload);
+        }
+      } else if (frame.type === 'event') {
+        if (['health', 'heartbeat', 'tick'].includes(frame.event)) return;
+        this.onEvent?.(frame);
+      }
+    });
+
+    this.ws.addEventListener('close', () => {
+      for (const [, fut] of this.pending) {
+        clearTimeout(fut.timer);
+        fut.reject(new Error('连接已关闭'));
+      }
+      this.pending.clear();
+      this.onDisconnect?.();
+    });
+  }
+
+  request(method, params) {
+    const id = crypto.randomUUID();
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`${method} 请求超时（15s）`));
+      }, 15000);
+
+      this.pending.set(id, { resolve, reject, timer });
+
+      const frame = { type: 'req', id, method };
+      if (params !== undefined && params !== null) frame.params = params;
+      this.ws.send(JSON.stringify(frame));
+    });
+  }
+
+  _send(method, params) {
+    this.ws.send(JSON.stringify({ type: 'req', id: crypto.randomUUID(), method, params }));
+  }
+
+  close() {
+    this.onDisconnect = null;
+    this.ws?.close();
+    this.ws = null;
+  }
+}
+
+// ── 连接栏 UI ────────────────────────────────────────────────────────────────
+
+let gw = null; // 当前 GatewayClient 实例
+let lastConfigGetHash = null;
+let grantedScopes = [];
+
+const urlInput       = document.getElementById('url-input');
+const tokenInput     = document.getElementById('token-input');
+const btnTokenToggle = document.getElementById('btn-token-toggle');
+const btnConnect     = document.getElementById('btn-connect');
+
+btnTokenToggle.addEventListener('click', () => {
+  const show = tokenInput.type === 'password';
+  tokenInput.type = show ? 'text' : 'password';
+  btnTokenToggle.textContent = show ? '🙈' : '👁';
+});
+const statusDot   = document.getElementById('status-dot');
+const statusText  = document.getElementById('status-text');
+const certHint    = document.getElementById('cert-hint');
+const certLink    = document.getElementById('cert-link');
+
+// 从 localStorage 恢复上次的 URL 和 Token
+urlInput.value   = localStorage.getItem('claw-wscat-url')   || '';
+tokenInput.value = localStorage.getItem('claw-wscat-token') || '';
+
+function setStatus(state, message, showCert = false) {
+  // state: 'disconnected' | 'connecting' | 'connected' | 'error'
+  statusDot.className = state === 'connected' ? 'connected' : state === 'error' ? 'error' : '';
+  statusText.textContent = message;
+  const connected = state === 'connected';
+  btnConnect.textContent = connected ? '断开' : '连接';
+  btnConnect.className   = connected ? 'connected' : '';
+  urlInput.disabled        = connected;
+  tokenInput.disabled      = connected;
+  btnTokenToggle.disabled  = connected;
+  certHint.style.display = showCert ? 'block' : 'none';
+}
+
+function updateCertLink(url) {
+  try {
+    const u = new URL(url);
+    const httpUrl = 'https://' + u.host + '/';
+    certLink.href = httpUrl;
+    certLink.textContent = httpUrl;
+  } catch {
+    certLink.href = '#';
+    certLink.textContent = url;
+  }
+}
+
+btnConnect.addEventListener('click', async () => {
+  if (gw) {
+    // 断开
+    gw.close();
+    gw = null;
+    setStatus('disconnected', '已断开');
+    return;
+  }
+
+  const url   = urlInput.value.trim();
+  const token = tokenInput.value.trim();
+  if (!url) {
+    setStatus('error', '请填写 Gateway URL');
+    return;
+  }
+
+  // 保存到 localStorage
+  localStorage.setItem('claw-wscat-url',   url);
+  localStorage.setItem('claw-wscat-token', token);
+  updateCertLink(url);
+
+  setStatus('connecting', '连接中…');
+  btnConnect.disabled = true;
+
+  gw = new GatewayClient(url, token);
+
+  gw.onLog = (msg) => appendSysLog(msg);
+
+  gw.onRawFrame = (raw) => {
+    if (!chkRawFrames.checked) return;
+    const time = new Date().toTimeString().slice(0, 8);
+    const line = document.createElement('div');
+    line.className = 'ev-line';
+    const truncated = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+    line.innerHTML =
+      `<span class="ev-time">[${escapeHtml(time)}]</span> ` +
+      `<span class="ev-raw">← ${escapeHtml(truncated)}</span>`;
+    eventLog.appendChild(line);
+    if (eventLog.children.length > 500) eventLog.removeChild(eventLog.firstChild);
+    eventLog.scrollTop = eventLog.scrollHeight;
+  };
+
+  gw.onDisconnect = () => {
+    gw = null;
+    grantedScopes = [];
+    lockedMethods.clear();
+    setStatus('error', '连接已断开');
+    buildCmdList([]);
+    updateSendBtn();
+  };
+
+  gw.onEvent = (frame) => appendEvent(frame);
+
+  try {
+    const helloPayload = await gw.connect();
+    const presenceScopes = helloPayload?.snapshot?.presence
+      ?.find(p => p.reason === 'connect' && p.mode !== 'gateway' && p.scopes)
+      ?.scopes;
+    const receivedScopes = helloPayload?.auth?.scopes ?? presenceScopes;
+    grantedScopes = receivedScopes ?? [];
+    const serverVer = helloPayload?.server?.version ?? '';
+    const methods = helloPayload?.features?.methods ?? [];
+
+    // 预先锁定无权访问的命令（仅当服务器返回了授权 scopes 时才锁定）
+    lockedMethods.clear();
+    if (receivedScopes) {
+      const methodsToCheck = methods.length ? methods : STATIC_CMDS;
+      methodsToCheck.forEach(m => {
+        if (!methodAllowedByScopes(m, grantedScopes)) lockedMethods.add(m);
+      });
+    }
+
+    const scopeTag = grantedScopes.length
+      ? ' · ' + grantedScopes.map(s => s.replace('operator.', '')).join(' ')
+      : '';
+    setStatus('connected', `已连接 · 协议 v3${serverVer ? ' · ' + serverVer : ''}${scopeTag}`);
+    buildCmdList(methods);
+  } catch (err) {
+    gw?.close();
+    gw = null;
+    const isWss = url.startsWith('wss:');
+    const isWs  = url.startsWith('ws:');
+    if (isWss) {
+      // 预检：能否建立 HTTPS 连接？能建立说明证书已信任，失败原因另有其他
+      let certTrusted = false;
+      try {
+        const u = new URL(url);
+        await fetch('https://' + u.host + '/', { mode: 'no-cors', signal: AbortSignal.timeout(3000) });
+        certTrusted = true;
+      } catch { /* 证书未信任或网络不通 */ }
+
+      if (certTrusted) {
+        setStatus('error', err.message + ' · 证书已信任，请检查 Token 或服务器是否正常');
+      } else {
+        setStatus('error', err.message, true /* showCert */);
+      }
+    } else if (isWs) {
+      setStatus('error', err.message);
+    } else {
+      setStatus('error', err.message);
+    }
+  } finally {
+    btnConnect.disabled = false;
+  }
+
+  updateSendBtn();
+});
+
+// ── 命令侧边栏 ───────────────────────────────────────────────────────────────
+
+const CMD_DEFAULTS = {
+  'channels.status': '{\n  "probe": false\n}',
+};
+
+// 未连接时展示的静态默认命令
+const STATIC_CMDS = [
+  'channels.status', 'status', 'models.list', 'agents.list',
+  'sessions.list', 'usage.status', 'config.get', 'config.schema',
+  'config.patch', 'skills.status',
+];
+
+// Scope 映射（源自 openclaw method-scopes.ts）
+const SCOPE_METHODS = {
+  'operator.read': new Set([
+    'health', 'doctor.memory.status', 'doctor.memory.dreamDiary',
+    'logs.tail', 'channels.status', 'status', 'usage.status', 'usage.cost',
+    'tts.status', 'tts.providers', 'commands.list',
+    'models.list', 'models.authStatus', 'tools.catalog', 'tools.effective',
+    'agents.list', 'agent.identity.get', 'skills.status', 'skills.search', 'skills.detail',
+    'voicewake.get', 'sessions.list', 'sessions.get', 'sessions.preview', 'sessions.resolve',
+    'sessions.compaction.list', 'sessions.compaction.get',
+    'sessions.subscribe', 'sessions.unsubscribe',
+    'sessions.messages.subscribe', 'sessions.messages.unsubscribe',
+    'sessions.usage', 'sessions.usage.timeseries', 'sessions.usage.logs',
+    'cron.list', 'cron.status', 'cron.runs', 'gateway.identity.get',
+    'system-presence', 'last-heartbeat', 'node.list', 'node.describe',
+    'chat.history', 'config.get', 'config.schema.lookup',
+    'talk.config', 'agents.files.list', 'agents.files.get',
+  ]),
+  'operator.write': new Set([
+    'message.action', 'send', 'poll', 'agent', 'agent.wait', 'wake',
+    'talk.mode', 'talk.speak', 'tts.enable', 'tts.disable', 'tts.convert', 'tts.setProvider',
+    'voicewake.set', 'node.invoke', 'chat.send', 'chat.abort',
+    'sessions.create', 'sessions.send', 'sessions.steer', 'sessions.abort',
+    'sessions.compaction.branch', 'push.test', 'node.pending.enqueue',
+    'doctor.memory.backfillDreamDiary', 'doctor.memory.resetDreamDiary',
+    'doctor.memory.resetGroundedShortTerm', 'doctor.memory.repairDreamingArtifacts',
+    'doctor.memory.dedupeDreamDiary',
+  ]),
+  'operator.approvals': new Set([
+    'exec.approval.get', 'exec.approval.list', 'exec.approval.request',
+    'exec.approval.waitDecision', 'exec.approval.resolve',
+    'plugin.approval.list', 'plugin.approval.request',
+    'plugin.approval.waitDecision', 'plugin.approval.resolve',
+  ]),
+  'operator.pairing': new Set([
+    'node.pair.request', 'node.pair.list', 'node.pair.reject',
+    'node.pair.verify', 'node.pair.approve',
+    'device.pair.list', 'device.pair.approve', 'device.pair.reject', 'device.pair.remove',
+    'device.token.rotate', 'device.token.revoke', 'node.rename',
+  ]),
+};
+
+// 镜像 openclaw 的 authorizeOperatorScopesForMethod 逻辑
+function methodAllowedByScopes(method, scopes) {
+  if (!scopes || !scopes.length) return false;
+  if (scopes.includes('operator.admin')) return true;
+  for (const [scope, methods] of Object.entries(SCOPE_METHODS)) {
+    if (methods.has(method)) {
+      // operator.read 也可以被 operator.write 满足
+      if (scope === 'operator.read') {
+        return scopes.includes('operator.read') || scopes.includes('operator.write');
+      }
+      return scopes.includes(scope);
+    }
+  }
+  // 未分类方法默认需要 admin
+  return false;
+}
+
+let currentMethod = 'channels.status';
+
+// 全量命令列表（连接后由 hello-ok 填充）
+let allMethods = [];
+
+// 动态重建命令列表
+// methods 为空时恢复静态默认列表
+function buildCmdList(methods) {
+  allMethods = methods.length ? methods : STATIC_CMDS;
+  if (cmdSearchInput) cmdSearchInput.value = '';
+  renderCmdList(allMethods);
+}
+
+function renderCmdList(list) {
+  const cmdListEl = document.getElementById('cmd-list');
+  cmdListEl.innerHTML = '';
+
+  list.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.dataset.cmd = m;
+    const isLocked = lockedMethods.has(m);
+    el.title = isLocked ? `${m}（权限不足）` : m;
+    el.className = 'cmd-item'
+      + (m === currentMethod ? ' active' : (i === 0 && !list.includes(currentMethod) ? ' active' : ''))
+      + (isLocked ? ' locked' : '');
+    el.textContent = m;
+    cmdListEl.appendChild(el);
+  });
+
+  // 若当前选中不在过滤结果里，自动选第一个
+  if (list.length && !list.includes(currentMethod)) {
+    selectCmd(list[0]);
+  }
+}
+
+function selectCmd(m) {
+  currentMethod = m;
+  methodBadge.textContent = m || '—';
+  customMethodInput.style.display = 'none';
+  cmdCustom.classList.remove('active');
+  document.querySelectorAll('.cmd-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.cmd === m)
+  );
+  if (isPatchCmd()) showPatchForm(); else showGenericForm();
+  paramsTextarea.value = CMD_DEFAULTS[currentMethod] ?? '';
+  validateJson();
+  updateSendBtn();
+}
+
+const patchForm          = document.getElementById('patch-form');
+const patchBaseHashInput = document.getElementById('patch-basehash-input');
+const patchFillBtn       = document.getElementById('patch-fill-btn');
+const patchRawTextarea   = document.getElementById('patch-raw-textarea');
+const patchJsonError     = document.getElementById('patch-json-error');
+
+function isPatchCmd() { return currentMethod === 'config.patch'; }
+
+function showPatchForm() {
+  paramsTextarea.style.display = 'none';
+  jsonError.style.display      = 'none';
+  patchForm.style.display      = 'flex';
+}
+
+function showGenericForm() {
+  patchForm.style.display      = 'none';
+  paramsTextarea.style.display = '';
+  jsonError.style.display      = '';
+}
+
+let patchRawValid = true;
+
+function validatePatchRaw() {
+  const raw = patchRawTextarea.value.trim();
+  if (!raw) {
+    patchRawValid = true;
+    patchRawTextarea.classList.remove('invalid');
+    patchJsonError.textContent = '';
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('必须是 JSON 对象（不能是数组或原始值）');
+    }
+    patchRawValid = true;
+    patchRawTextarea.classList.remove('invalid');
+    patchJsonError.textContent = '';
+    return parsed;
+  } catch (e) {
+    patchRawValid = false;
+    patchRawTextarea.classList.add('invalid');
+    patchJsonError.textContent = '⚠ JSON 格式错误：' + e.message;
+    return null;
+  }
+}
+
+let jsonValid = true;
+
+const methodBadge       = document.getElementById('method-badge');
+const customMethodInput = document.getElementById('custom-method-input');
+const paramsTextarea    = document.getElementById('params-textarea');
+const jsonError         = document.getElementById('json-error');
+const btnSend           = document.getElementById('btn-send');
+const cmdCustom         = document.getElementById('cmd-custom');
+const cmdSearchInput    = document.getElementById('cmd-search');
+
+// 记录因 scope 不足而失败的命令（必须在 buildCmdList 之前声明）
+const lockedMethods = new Set();
+
+// 初始化命令列表（静态默认）
+buildCmdList([]);
+
+// 命令列表点击
+document.getElementById('cmd-list').addEventListener('click', (e) => {
+  const item = e.target.closest('.cmd-item');
+  if (!item) return;
+  selectCmd(item.dataset.cmd);
+  if (isPatchCmd()) validatePatchRaw();
+});
+
+// 搜索过滤
+cmdSearchInput?.addEventListener('input', () => {
+  const q = cmdSearchInput.value.trim().toLowerCase();
+  const filtered = q ? allMethods.filter(m => m.toLowerCase().includes(q)) : allMethods;
+  renderCmdList(filtered);
+});
+
+// 自定义 RPC 点击
+cmdCustom.addEventListener('click', () => {
+  document.querySelectorAll('.cmd-item').forEach(el => el.classList.remove('active'));
+  cmdCustom.classList.add('active');
+  currentMethod = customMethodInput.value.trim() || '';
+  methodBadge.textContent = currentMethod || '自定义';
+  customMethodInput.style.display = 'block';
+  showGenericForm();
+  paramsTextarea.value = '';
+  validateJson();
+  updateSendBtn();
+});
+
+// 自定义 method 输入更新
+customMethodInput.addEventListener('input', () => {
+  currentMethod = customMethodInput.value.trim();
+  methodBadge.textContent = currentMethod || '自定义';
+  updateSendBtn();
+});
+
+// ── JSON 实时校验 ─────────────────────────────────────────────────────────────
+
+function validateJson() {
+  const raw = paramsTextarea.value.trim();
+  if (!raw) {
+    jsonValid = true;
+    paramsTextarea.classList.remove('invalid');
+    jsonError.textContent = '';
+    return null; // 空参数视为合法
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    jsonValid = true;
+    paramsTextarea.classList.remove('invalid');
+    jsonError.textContent = '';
+    return parsed;
+  } catch (e) {
+    jsonValid = false;
+    paramsTextarea.classList.add('invalid');
+    jsonError.textContent = '⚠ JSON 格式错误：' + e.message;
+    return null;
+  }
+}
+
+paramsTextarea.addEventListener('input', () => {
+  validateJson();
+  updateSendBtn();
+});
+
+patchRawTextarea.addEventListener('input', () => {
+  validatePatchRaw();
+  updateSendBtn();
+});
+
+patchFillBtn.addEventListener('click', () => {
+  if (lastConfigGetHash) {
+    patchBaseHashInput.value = lastConfigGetHash;
+  }
+});
+
+// ── 响应面板：文本 Tab ────────────────────────────────────────────────────────
+
+const respText   = document.getElementById('resp-text');
+const respTiming = document.getElementById('resp-timing');
+
+function syntaxHighlight(json) {
+  // 先做 HTML 转义，再添加 span
+  const escaped = escapeHtml(json);
+
+  return escaped.replace(
+    /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    (match) => {
+      if (/^"/.test(match)) {
+        return /:$/.test(match)
+          ? `<span class="j-key">${match}</span>`
+          : `<span class="j-str">${match}</span>`;
+      }
+      if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
+      if (/null/.test(match))       return `<span class="j-null">${match}</span>`;
+      return `<span class="j-num">${match}</span>`;
+    }
+  );
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+let lastPayload = null;
+
+function showScopeHelp(missingScope) {
+  respText.insertAdjacentHTML('beforeend',
+    `\n<span style="display:block;margin-top:10px;padding:10px;background:#2a1f3d;border:1px solid #cba6f7;border-radius:6px;font-size:11px;line-height:1.8;">` +
+    `<strong style="color:#cba6f7">权限不足：缺少 scope <code>${escapeHtml(missingScope)}</code></strong><br>` +
+    `<span style="color:#bac2de">此 Token 没有足够的权限执行该命令。<br>` +
+    `请检查 Token 的权限配置，或使用具有 <code>operator.admin</code> 权限的 Token 连接。</span>` +
+    `</span>`
+  );
+}
+
+function markLocked(method) {
+  if (!method || lockedMethods.has(method)) return;
+  lockedMethods.add(method);
+  document.querySelectorAll(`.cmd-item[data-cmd="${CSS.escape(method)}"]`).forEach(el => {
+    el.classList.add('locked');
+  });
+}
+
+function showTextResponse(payload, ms, isError) {
+  const json = JSON.stringify(payload, null, 2);
+  if (isError) {
+    respText.innerHTML = `<span class="j-err">${escapeHtml(json)}</span>`;
+  } else {
+    respText.innerHTML = syntaxHighlight(json);
+  }
+  respTiming.textContent = ms != null ? `${ms}ms` : '';
+  lastPayload = payload;
+}
+
+// ── 发送按钮 ──────────────────────────────────────────────────────────────────
+
+btnSend.addEventListener('click', async () => {
+  if (!gw || !currentMethod) return;
+
+  let params;
+  if (isPatchCmd()) {
+    if (!patchRawValid) return;
+    const baseHash = patchBaseHashInput.value.trim();
+    const rawObj   = validatePatchRaw() ?? {};
+    params = {
+      ...(baseHash ? { baseHash } : {}),
+      raw: JSON.stringify(rawObj),
+    };
+  } else {
+    if (!jsonValid) return;
+    const rawParams = paramsTextarea.value.trim();
+    params = rawParams ? JSON.parse(rawParams) : undefined;
+  }
+
+  btnSend.disabled = true;
+  respText.innerHTML = '<span style="color:#6c7086">发送中…</span>';
+  respTiming.textContent = '';
+  lastPayload = null;
+
+  const t0 = Date.now();
+  try {
+    const payload = await gw.request(currentMethod, params);
+    showTextResponse(payload, Date.now() - t0, false);
+    if (currentTab === 'preview') renderPreview(payload);
+    // 追踪 config.get 的响应 hash
+    if (currentMethod === 'config.get' && payload?.hash) {
+      lastConfigGetHash = payload.hash;
+      patchFillBtn.disabled = false;
+      patchFillBtn.title = '填入上次 config.get 的 baseHash';
+    }
+  } catch (err) {
+    const scopeMatch = err.message.match(/missing scope:\s*(\S+)/);
+    if (scopeMatch) {
+      const scope = scopeMatch[1];
+      markLocked(currentMethod);
+      respText.innerHTML = `<span class="j-err">权限不足：缺少 scope <strong>${escapeHtml(scope)}</strong></span>`;
+      respTiming.textContent = `${Date.now() - t0}ms`;
+      showScopeHelp(scope);
+    } else {
+      showTextResponse({ error: err.message }, Date.now() - t0, true);
+      if (currentTab === 'preview') renderPreview({ error: err.message });
+    }
+  } finally {
+    updateSendBtn();
+  }
+});
+
+document.getElementById('btn-clear-resp').addEventListener('click', () => {
+  respText.innerHTML = '';
+  document.getElementById('resp-preview').innerHTML = '';
+  respTiming.textContent = '';
+  lastPayload = null;
+});
+
+// ── Tab 切换 ──────────────────────────────────────────────────────────────────
+
+let currentTab = 'text';
+
+const respPreviewEl = document.getElementById('resp-preview');
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+
+    if (currentTab === 'text') {
+      respText.style.display = '';
+      respPreviewEl.style.display = 'none';
+    } else {
+      respText.style.display = 'none';
+      respPreviewEl.style.display = 'block';
+      if (lastPayload !== null) renderPreview(lastPayload);
+    }
+  });
+});
+
+// ── JSON 树渲染 ───────────────────────────────────────────────────────────────
+
+function renderPreview(payload) {
+  respPreviewEl.innerHTML = '';
+  respPreviewEl.appendChild(buildTree(payload, 0));
+}
+
+function buildTree(value, depth) {
+  const frag = document.createDocumentFragment();
+
+  if (value === null) {
+    frag.appendChild(span('jt-null', 'null'));
+    return frag;
+  }
+
+  if (typeof value === 'boolean') {
+    frag.appendChild(span('jt-bool', String(value)));
+    return frag;
+  }
+
+  if (typeof value === 'number') {
+    frag.appendChild(span('jt-num', String(value)));
+    return frag;
+  }
+
+  if (typeof value === 'string') {
+    frag.appendChild(span('jt-str', JSON.stringify(value)));
+    return frag;
+  }
+
+  if (Array.isArray(value)) {
+    return buildCollection(value, '[', ']', (i) => String(i), depth);
+  }
+
+  if (typeof value === 'object') {
+    return buildCollection(value, '{', '}', (k) => JSON.stringify(k), depth);
+  }
+
+  frag.appendChild(document.createTextNode(String(value)));
+  return frag;
+}
+
+function buildCollection(value, open, close, keyFmt, depth) {
+  const frag = document.createDocumentFragment();
+  const entries = Array.isArray(value)
+    ? value.map((v, i) => [i, v])
+    : Object.entries(value);
+
+  if (entries.length === 0) {
+    frag.appendChild(span('jt-bracket', open + close));
+    return frag;
+  }
+
+  // 超过 depth 5 默认折叠
+  const collapsed = depth >= 5;
+  const toggle = span('jt-toggle', collapsed ? '▸' : '▾');
+  const openBracket = span('jt-bracket', open);
+  frag.appendChild(toggle);
+  frag.appendChild(openBracket);
+
+  const children = document.createElement('div');
+  children.className = 'jt-children' + (collapsed ? ' collapsed' : '');
+  children.style.paddingLeft = '16px';
+
+  entries.forEach(([k, v], idx) => {
+    const line = document.createElement('div');
+    // 对象时显示 key，数组时不显示 key
+    if (!Array.isArray(value)) {
+      line.appendChild(span('jt-key', keyFmt(k)));
+      line.appendChild(document.createTextNode(': '));
+    }
+    line.appendChild(buildTree(v, depth + 1));
+    if (idx < entries.length - 1) line.appendChild(document.createTextNode(','));
+    children.appendChild(line);
+  });
+
+  frag.appendChild(children);
+  frag.appendChild(span('jt-bracket', close));
+
+  toggle.addEventListener('click', () => {
+    const isCollapsed = children.classList.toggle('collapsed');
+    toggle.textContent = isCollapsed ? '▸' : '▾';
+  });
+
+  return frag;
+}
+
+function span(cls, text) {
+  const el = document.createElement('span');
+  el.className = cls;
+  el.textContent = text;
+  return el;
+}
+
+// ── 事件日志 ──────────────────────────────────────────────────────────────────
+
+const eventLog    = document.getElementById('event-log');
+const chkRawFrames = document.getElementById('chk-raw-frames');
+
+function appendSysLog(msg) {
+  const time = new Date().toTimeString().slice(0, 8);
+  const line = document.createElement('div');
+  line.className = 'ev-line';
+  line.innerHTML =
+    `<span class="ev-time">[${escapeHtml(time)}]</span> ` +
+    `<span class="ev-sys">${escapeHtml(msg)}</span>`;
+  eventLog.appendChild(line);
+  if (eventLog.children.length > 500) eventLog.removeChild(eventLog.firstChild);
+  eventLog.scrollTop = eventLog.scrollHeight;
+}
+
+function appendEvent(frame) {
+  const now = new Date();
+  const time = now.toTimeString().slice(0, 8); // HH:MM:SS
+
+  const payloadStr = JSON.stringify(frame.payload ?? {});
+  const truncated = payloadStr.length > 80
+    ? payloadStr.slice(0, 80) + '…'
+    : payloadStr;
+
+  const line = document.createElement('div');
+  line.className = 'ev-line';
+  line.innerHTML =
+    `<span class="ev-time">[${escapeHtml(time)}]</span> ` +
+    `<span class="ev-name">${escapeHtml(frame.event)}</span> ` +
+    `<span class="ev-payload">${escapeHtml(truncated)}</span>`;
+
+  eventLog.appendChild(line);
+  // 超过 500 条时移除最早的条目，防止 DOM 无限增长
+  if (eventLog.children.length > 500) {
+    eventLog.removeChild(eventLog.firstChild);
+  }
+  // 自动滚动到最新
+  eventLog.scrollTop = eventLog.scrollHeight;
+}
+
+document.getElementById('btn-clear-ev').addEventListener('click', () => {
+  eventLog.innerHTML = '';
+});
+
+function updateSendBtn() {
+  const isLocked = lockedMethods.has(currentMethod);
+  const canSend = !isLocked && (isPatchCmd()
+    ? !!gw && patchRawValid && !!currentMethod
+    : !!gw && jsonValid && !!currentMethod);
+  btnSend.disabled = !canSend;
+  btnSend.title = isLocked ? '权限不足：Token 缺少调用此命令所需的 scope' : '';
+}
+</script>
+</body>
+</html>
